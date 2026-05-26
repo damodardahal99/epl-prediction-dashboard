@@ -43,26 +43,41 @@ def load_predictions(file) -> pd.DataFrame:
 # ---------------------------------------------------------
 def scrape_actual_standings() -> pd.DataFrame:
     url = "https://www.espn.com/soccer/standings/_/league/eng.1"
-    response = requests.get(url)
-    response.raise_for_status()
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    response = requests.get(url, headers=headers, timeout=10)
+
+    # If ESPN blocks us, return empty DataFrame instead of crashing
+    if response.status_code != 200:
+        return pd.DataFrame({"Team": [], "ActualStanding": []})
+
     soup = BeautifulSoup(response.text, "html.parser")
 
     teams = []
 
-    # ESPN's current structure (2024–2026)
+    # ESPN's current structure
     for team_cell in soup.select("div.team-link a"):
-        team_name = team_cell.text.strip()
-        if team_name:
-            teams.append(team_name)
+        name = team_cell.text.strip()
+        if name:
+            teams.append(name)
 
-    # Safety check
-    if len(teams) == 0:
+    # If scraping fails, return empty DF
+    if not teams:
         return pd.DataFrame({"Team": [], "ActualStanding": []})
 
     return pd.DataFrame({
         "Team": teams,
         "ActualStanding": list(range(1, len(teams) + 1))
     })
+
 
 
 # ---------------------------------------------------------
