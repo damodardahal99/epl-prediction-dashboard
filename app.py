@@ -84,9 +84,17 @@ def normalize_team_names(df: pd.DataFrame) -> pd.DataFrame:
 # COMPARE PREDICTIONS
 # ---------------------------------------------------------
 def compare_predictions(pred_df: pd.DataFrame, actual_df: pd.DataFrame) -> pd.DataFrame:
+    # Merge predictions with actual standings
     merged = pred_df.merge(actual_df, on="Team", how="left")
+
+    # Identify predictor columns (everything except Team + ActualStanding)
     predictors = [c for c in merged.columns if c not in ["Team", "ActualStanding"]]
 
+    # Convert predictor columns to numeric (fixes PyArrow type errors)
+    for p in predictors:
+        merged[p] = pd.to_numeric(merged[p], errors="coerce")
+
+    # Compute absolute errors safely
     for p in predictors:
         merged[f"{p}_Error"] = (merged[p] - merged["ActualStanding"]).abs()
 
