@@ -44,18 +44,26 @@ def load_predictions(file) -> pd.DataFrame:
 def scrape_actual_standings() -> pd.DataFrame:
     url = "https://www.espn.com/soccer/standings/_/league/eng.1"
     response = requests.get(url)
+    response.raise_for_status()
     soup = BeautifulSoup(response.text, "html.parser")
 
     teams = []
-    for row in soup.select("tbody tr"):
-        team_cell = row.select_one("span.hide-mobile")
-        if team_cell:
-            teams.append(team_cell.text.strip())
+
+    # ESPN's current structure (2024–2026)
+    for team_cell in soup.select("div.team-link a"):
+        team_name = team_cell.text.strip()
+        if team_name:
+            teams.append(team_name)
+
+    # Safety check
+    if len(teams) == 0:
+        return pd.DataFrame({"Team": [], "ActualStanding": []})
 
     return pd.DataFrame({
         "Team": teams,
         "ActualStanding": list(range(1, len(teams) + 1))
     })
+
 
 # ---------------------------------------------------------
 # NORMALIZE TEAM NAMES
